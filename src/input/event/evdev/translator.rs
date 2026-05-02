@@ -251,7 +251,7 @@ impl EventTranslator {
             }
 
             // Normalize the input value
-            let value = self.get_input_value(event, &evdev_config.value_type);
+            let value = self.get_input_value(event, &evdev_config.value_type, evdev_config.invert);
             log::trace!(
                 "Translated value {:?} {} to {:?}",
                 event.code(),
@@ -447,8 +447,15 @@ impl EventTranslator {
     }
 
     /// Returns the normalized value of the event expressed as an [InputValue].
-    fn get_input_value(&self, event: &InputEvent, value_type: &ValueType) -> InputValue {
-        let normal_value = self.get_normalized_value(event, value_type);
+    fn get_input_value(&self, event: &InputEvent, value_type: &ValueType, inverted: bool) -> InputValue {
+        let mut normal_value = self.get_normalized_value(event, value_type);
+
+        if inverted {
+            normal_value = match value_type {
+                ValueType::Trigger | ValueType::Button => 1.0 - normal_value,
+                _ => -normal_value,
+            };
+        }
 
         match value_type {
             ValueType::Button => {
